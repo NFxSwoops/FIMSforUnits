@@ -7,7 +7,7 @@
   <style>
     :root{
       --bg:#0b0c10;--card:#15171c;--ink:#e8eef2;--muted:#9fb0bd;--accent:#26c281;--danger:#ff6b6b;--line:#242834;
-      --radius:16px;--pad:14px;--gap:10px;--input:#1b1e26;
+      --radius:16px;--pad:14px;--gap:10px;--input:#1b1e26;--head-offset:0px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -20,9 +20,9 @@
     label{font-size:.85rem;color:var(--muted);display:block;margin:0 0 6px}
     input[type=number]{width:100%;background:var(--input);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 12px;font-size:1.05rem;appearance:textfield}
     input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
-    .grid{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+    .grid{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;}
     .row{display:grid;grid-template-columns:92px repeat(5,1fr);align-items:center;border-top:1px solid var(--line)}
-    .row.head{position:sticky;top:58px;background:#11141a;border-top:none;z-index:5}
+    .row.head{position:relative; top:auto; background:#11141a; border-top:none; z-index:auto; box-shadow:none;}
     .cell{padding:10px 8px;font-size:.92rem}
     .cell small{color:var(--muted)}
     .row .cell input{font-size:1rem;padding:10px;border-radius:10px}
