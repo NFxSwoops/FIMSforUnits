@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ride Hourly Report</title>
+  <style>
+    :root{
+      --bg:#0b0c10;--card:#15171c;--ink:#e8eef2;--muted:#9fb0bd;--accent:#26c281;--danger:#ff6b6b;--line:#242834;
+      --radius:16px;--pad:14px;--gap:10px;--input:#1b1e26;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:980px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 12px calc(72px + env(safe-area-inset-bottom));}
+    header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.75) 70%,transparent);backdrop-filter:saturate(1.2) blur(6px);padding:10px 0 4px}
+    h1{margin:0 0 6px;font-size:1.2rem;letter-spacing:.2px}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--pad)}
+    label{font-size:.85rem;color:var(--muted);display:block;margin:0 0 6px}
+    input[type=number]{width:100%;background:var(--input);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 12px;font-size:1.05rem;appearance:textfield}
+    input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
+    .grid{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+    .row{display:grid;grid-template-columns:92px repeat(5,1fr);align-items:center;border-top:1px solid var(--line)}
+    .row.head{position:sticky;top:58px;background:#11141a;border-top:none;z-index:5}
+    .cell{padding:10px 8px;font-size:.92rem}
+    .cell small{color:var(--muted)}
+    .row .cell input{font-size:1rem;padding:10px;border-radius:10px}
+    .hour{white-space:nowrap;color:var(--muted);font-weight:600}
+    .row:nth-child(even){background:rgba(255,255,255,.01)}
+    .totals{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(11,12,16,.95),rgba(11,12,16,.85) 70%,transparent);backdrop-filter:saturate(1.2) blur(6px);}
+    .totals .inner{display:grid;grid-template-columns:repeat(5,1fr) 110px;gap:var(--gap)}
+    .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:10px 12px;font-size:.9rem;display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .pill b{font-variant-numeric:tabular-nums}
+    button.reset{width:100%;border:none;background:var(--danger);color:#111;border-radius:999px;padding:12px;font-weight:700;font-size:1rem}
+    .note{margin-top:8px;color:var(--muted);font-size:.85rem}
+    .watermark{position:fixed;bottom:8px;left:10px;font-size:.8rem;color:var(--muted);opacity:.5;user-select:none;z-index:1}
+    @media(min-width:720px){
+      h1{font-size:1.4rem}
+      .controls{grid-template-columns:260px 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Ride Hourly Report</h1>
+      <div class="controls">
+        <div class="card">
+          <label for="seats">Seats per train (set once)</label>
+          <input id="seats" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g., 32" />
+          <div class="note">Enter this first. It will be used for all rows.</div>
+        </div>
+        <div class="card">
+          <label>How it works</label>
+          <div class="note">
+            • If you enter <b>Cycles</b> and <b>Hourly</b>, it auto-calculates <b>Empty</b>.<br/>
+            • If you enter <b>Cycles</b> and <b>Empty</b>, it auto-calculates <b>Hourly</b>.<br/>
+            • <b>Running Sum</b> updates every time you edit a row.
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid" id="grid">
+      <div class="row head">
+        <div class="cell"><small>Hour</small></div>
+        <div class="cell"><small>Cycles</small></div>
+        <div class="cell"><small>Empty</small></div>
+        <div class="cell"><small>Hourly</small></div>
+        <div class="cell"><small>Running Sum</small></div>
+        <div class="cell"><small>FastLane</small></div>
+      </div>
+    </div>
+
+    <div class="totals">
+      <div class="inner">
+        <div class="pill"><span>Total Cycles</span> <b id="tCycles">0</b></div>
+        <div class="pill"><span>Total Empty</span> <b id="tEmpty">0</b></div>
+        <div class="pill"><span>Total Hourly</span> <b id="tHourly">0</b></div>
+        <div class="pill"><span>Final Running</span> <b id="tRunning">0</b></div>
+        <div class="pill"><span>Total FastLane</span> <b id="tFast">0</b></div>
+        <div>
+          <button class="reset" id="resetBtn" type="button">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="watermark">Made with ❤ by berto — v1.0</div>
+  </div>
+
+  <script>
+    const HOURS = [
+      '10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM','1 AM','2 AM'
+    ];
+
+    const grid = document.getElementById('grid');
+    const seatsEl = document.getElementById('seats');
+    const totalsEls = {
+      cycles: document.getElementById('tCycles'),
+      empty: document.getElementById('tEmpty'),
+      hourly: document.getElementById('tHourly'),
+      running: document.getElementById('tRunning'),
+      fast: document.getElementById('tFast'),
+    };
+
+    const rows = HOURS.map((label, i) => createRow(label, i));
+
+    function createNumInput(placeholder=''){
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.inputMode = 'numeric';
+      input.min = '0';
+      input.step = '1';
+      input.placeholder = placeholder;
+      return input;
+    }
+
+    function createRow(label, idx){
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const hour = document.createElement('div');
+      hour.className = 'cell hour';
+      hour.textContent = label;
+
+      const cycles = createNumInput('0');
+      const empty = createNumInput('0');
+      const hourly = createNumInput('0');
+      const running = createNumInput('0');
+      running.readOnly = true; running.tabIndex = -1; running.ariaReadOnly = 'true';
+      const fast = createNumInput('0');
+
+      const cCell = document.createElement('div'); cCell.className='cell'; cCell.appendChild(cycles);
+      const eCell = document.createElement('div'); eCell.className='cell'; eCell.appendChild(empty);
+      const hCell = document.createElement('div'); hCell.className='cell'; hCell.appendChild(hourly);
+      const rCell = document.createElement('div'); rCell.className='cell'; rCell.appendChild(running);
+      const fCell = document.createElement('div'); fCell.className='cell'; fCell.appendChild(fast);
+
+      row.append(hour, cCell, eCell, hCell, rCell, fCell);
+      grid.appendChild(row);
+
+      [cycles, empty, hourly, fast].forEach(inp => inp.addEventListener('input', () => recalc()));
+
+      return { idx, row, label, cycles, empty, hourly, running, fast };
+    }
+
+    function n(v){ const x=parseInt(v,10); return Number.isFinite(x)&&x>=0?x:0; }
+
+    function recalc(){
+      const seats=n(seatsEl.value);
+      let run=0,tCycles=0,tEmpty=0,tHourly=0,tFast=0;
+
+      rows.forEach((r)=>{
+        const cycles=n(r.cycles.value);
+        let empty=n(r.empty.value);
+        let hourly=n(r.hourly.value);
+
+        if(cycles>0&&seats>0){
+          if(hourly>0){ empty=Math.max(seats*cycles-hourly,0); r.empty.value=empty; }
+          else if(empty>0){ hourly=Math.max(seats*cycles-empty,0); r.hourly.value=hourly; }
+          else { hourly=0; empty=0; }
+        }else{
+          if(seats===0||cycles===0){
+            if(hourly>0&&empty===0){ r.empty.value=0; empty=0; }
+            else if(empty>0&&hourly===0){ r.hourly.value=0; hourly=0; }
+            else{ r.hourly.value=0; r.empty.value=0; hourly=0; empty=0; }
+          }
+        }
+
+        run+=hourly; r.running.value=run;
+
+        tCycles+=cycles; tEmpty+=empty; tHourly+=hourly; tFast+=n(r.fast.value);
+      });
+
+      totalsEls.cycles.textContent=tCycles.toLocaleString();
+      totalsEls.empty.textContent=tEmpty.toLocaleString();
+      totalsEls.hourly.textContent=tHourly.toLocaleString();
+      totalsEls.running.textContent=(rows.at(-1)?.running.value||0).toString();
+      totalsEls.fast.textContent=tFast.toLocaleString();
+    }
+
+    seatsEl.addEventListener('input', recalc);
+
+    document.getElementById('resetBtn').addEventListener('click',()=>{
+      seatsEl.value='';
+      rows.forEach(r=>{r.cycles.value='';r.empty.value='';r.hourly.value='';r.running.value='0';r.fast.value='';});
+      recalc();
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+
+    recalc();
+  </script>
+</body>
+</html>
