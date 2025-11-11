@@ -29,7 +29,7 @@
     .hour{white-space:nowrap;color:var(--muted);font-weight:600}
     .row:nth-child(even){background:rgba(255,255,255,.01)}
     .totals{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(11,12,16,.95),rgba(11,12,16,.85) 70%,transparent);backdrop-filter:saturate(1.2) blur(6px);}
-    .totals .inner{display:grid;grid-template-columns:repeat(5,1fr) 110px;gap:var(--gap)}
+    .totals .inner{display:grid;grid-template-columns:repeat(4,1fr) 110px;gap:var(--gap)}
     .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:10px 12px;font-size:.9rem;display:flex;justify-content:space-between;gap:8px;align-items:center}
     .pill b{font-variant-numeric:tabular-nums}
     button.reset{width:100%;border:none;background:var(--danger);color:#111;border-radius:999px;padding:12px;font-weight:700;font-size:1rem}
@@ -77,7 +77,6 @@
       <div class="inner">
         <div class="pill"><span>Total Cycles</span> <b id="tCycles">0</b></div>
         <div class="pill"><span>Total Empty</span> <b id="tEmpty">0</b></div>
-        <div class="pill"><span>Total Hourly</span> <b id="tHourly">0</b></div>
         <div class="pill"><span>Final Running</span> <b id="tRunning">0</b></div>
         <div class="pill"><span>Total FastLane</span> <b id="tFast">0</b></div>
         <div>
@@ -99,7 +98,6 @@
     const totalsEls = {
       cycles: document.getElementById('tCycles'),
       empty: document.getElementById('tEmpty'),
-      hourly: document.getElementById('tHourly'),
       running: document.getElementById('tRunning'),
       fast: document.getElementById('tFast'),
     };
@@ -149,7 +147,7 @@
 
     function recalc(){
       const seats=n(seatsEl.value);
-      let run=0,tCycles=0,tEmpty=0,tHourly=0,tFast=0;
+      let run=0,tCycles=0,tEmpty=0,tFast=0;
 
       rows.forEach((r)=>{
         const cycles=n(r.cycles.value);
@@ -170,12 +168,11 @@
 
         run+=hourly; r.running.value=run;
 
-        tCycles+=cycles; tEmpty+=empty; tHourly+=hourly; tFast+=n(r.fast.value);
+        tCycles+=cycles; tEmpty+=empty; tFast+=n(r.fast.value);
       });
 
       totalsEls.cycles.textContent=tCycles.toLocaleString();
       totalsEls.empty.textContent=tEmpty.toLocaleString();
-      totalsEls.hourly.textContent=tHourly.toLocaleString();
       totalsEls.running.textContent=(rows.at(-1)?.running.value||0).toString();
       totalsEls.fast.textContent=tFast.toLocaleString();
     }
