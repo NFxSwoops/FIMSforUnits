@@ -7,7 +7,7 @@
   <style>
     :root{
       --bg:#0b0c10;--card:#15171c;--ink:#e8eef2;--muted:#9fb0bd;--accent:#26c281;--danger:#ff6b6b;--line:#242834;
-      --radius:16px;--pad:14px;--gap:10px;--input:#1b1e26;--head-offset:0px;
+      --radius:16px;--pad:14px;--gap:10px;--input:#1b1e26;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -22,7 +22,7 @@
     input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
     .grid{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;}
     .row{display:grid;grid-template-columns:92px repeat(5,1fr);align-items:center;border-top:1px solid var(--line)}
-    .row.head{position:relative; top:auto; background:#11141a; border-top:none; z-index:auto; box-shadow:none;}
+    .row.head{position:relative;top:auto;background:#11141a;border-top:none;z-index:auto;box-shadow:none;}
     .cell{padding:10px 8px;font-size:.92rem}
     .cell small{color:var(--muted)}
     .row .cell input{font-size:1rem;padding:10px;border-radius:10px}
@@ -138,9 +138,14 @@
       row.append(hour, cCell, eCell, hCell, rCell, fCell);
       grid.appendChild(row);
 
-      [cycles, empty, hourly, fast].forEach(inp => inp.addEventListener('input', () => recalc()));
+      const rowObj = { idx, row, label, cycles, empty, hourly, running, fast, lastEdited: null };
 
-      return { idx, row, label, cycles, empty, hourly, running, fast };
+      cycles.addEventListener('input', () => { recalc(); });
+      empty.addEventListener('input', () => { rowObj.lastEdited = 'empty'; recalc(); });
+      hourly.addEventListener('input', () => { rowObj.lastEdited = 'hourly'; recalc(); });
+      fast.addEventListener('input', () => { recalc(); });
+
+      return rowObj;
     }
 
     function n(v){ const x=parseInt(v,10); return Number.isFinite(x)&&x>=0?x:0; }
@@ -155,14 +160,22 @@
         let hourly=n(r.hourly.value);
 
         if(cycles>0&&seats>0){
-          if(hourly>0){ empty=Math.max(seats*cycles-hourly,0); r.empty.value=empty; }
-          else if(empty>0){ hourly=Math.max(seats*cycles-empty,0); r.hourly.value=hourly; }
-          else { hourly=0; empty=0; }
+          const mode = r.lastEdited || (hourly>0 ? 'hourly' : (empty>0 ? 'empty' : null));
+          if(mode==='hourly' && hourly>0){
+            empty=Math.max(seats*cycles-hourly,0);
+            r.empty.value=empty;
+          }else if(mode==='empty' && empty>0){
+            hourly=Math.max(seats*cycles-empty,0);
+            r.hourly.value=hourly;
+          }else{
+            hourly=0; empty=0;
+            r.hourly.value='';
+            r.empty.value='';
+          }
         }else{
-          if(seats===0||cycles===0){
-            if(hourly>0&&empty===0){ r.empty.value=0; empty=0; }
-            else if(empty>0&&hourly===0){ r.hourly.value=0; hourly=0; }
-            else{ r.hourly.value=0; r.empty.value=0; hourly=0; empty=0; }
+          // No seats or cycles: keep manual values but don't auto compute
+          if(seats===0 || cycles===0){
+            // do nothing special; user can type whatever
           }
         }
 
@@ -181,7 +194,14 @@
 
     document.getElementById('resetBtn').addEventListener('click',()=>{
       seatsEl.value='';
-      rows.forEach(r=>{r.cycles.value='';r.empty.value='';r.hourly.value='';r.running.value='0';r.fast.value='';});
+      rows.forEach(r=>{
+        r.cycles.value='';
+        r.empty.value='';
+        r.hourly.value='';
+        r.running.value='0';
+        r.fast.value='';
+        r.lastEdited=null;
+      });
       recalc();
       window.scrollTo({top:0,behavior:'smooth'});
     });
